@@ -1,7 +1,11 @@
-# Serverless-ish WordPress on AWS (ECS Fargate + Aurora Serverless v2) with Terraform
+# Serverless WordPress on AWS  
+(ECS Fargate + ALB + Aurora Serverless v2) with Terraform
 
-Terraformで **ECS Fargate + ALB + Aurora Serverless v2** を構築し、WordPressを動作させるサンプルです。  
-「オンプレ運用経験を土台に、AWSで再現性のある環境をIaCで構築できる」ことを示す目的で作成しています。
+Terraformを用いて、ECS Fargate + ALB + Aurora Serverless v2 構成で  
+WordPressをデプロイするサンプルプロジェクトです。
+
+オンプレミス基盤運用経験をベースに、AWS上で再現性のある構成を  
+Infrastructure as Codeで構築できることを目的としています。
 
 ---
 
@@ -9,53 +13,59 @@ Terraformで **ECS Fargate + ALB + Aurora Serverless v2** を構築し、WordPre
 
 ```mermaid
 flowchart LR
-  U[User] --> ALB[Application Load Balancer\nPublic]
-  ALB --> ECS[ECS Fargate Service\nWordPress Container]
-  ECS --> AUR[Aurora Serverless v2 (MySQL)\nPrivate Subnets]
+  U[User] --> ALB[Application Load Balancer]
+  ALB --> ECS[ECS Fargate Service - WordPress]
+  ECS --> AUR[(Aurora Serverless v2 - MySQL)]
 
   subgraph VPC
     ALB
     ECS
     AUR
   end
-  ```
+```
 
-  Key Points (What this repo demonstrates)
+---
 
-IaC (Terraform) による再現性ある環境構築（terraform applyでdev環境作成）
+## Key Features
 
-コンテナ実行基盤はFargate（EC2運用を排除）
+- Infrastructure as Code with Terraform
+- ECS Fargate for container runtime (no EC2 management)
+- Aurora Serverless v2 for auto-scaling database layer
+- ALB as public entry point
+- Database deployed in private subnets
+- Security Group restricts DB access to ECS only
 
-DBはAurora Serverless v2（需要変動に追従しやすいスケーリングモデル）
+---
 
-ALB配下にECS（一般的なWeb構成のベースを押さえる）
+## Repository Structure
 
-DBは private subnet に配置し、Security Groupで ECSタスクからのみ接続許可
-
-Repository Structure
-
+```
 aws-serverless-wordpress/
-  envs/dev/                # dev environment root
+  envs/
+    dev/
   modules/
-    vpc/                   # VPC, subnets, routing (minimal)
-    alb/                   # ALB + target group + listener
-    ecs_fargate/           # ECS cluster/service/task definition
-    aurora_serverless_v2/  # Aurora cluster (Serverless v2)
-    ecr/                   # ECR repository (optional, for future)
+    vpc/
+    alb/
+    ecs_fargate/
+    aurora_serverless_v2/
+    ecr/
+```
 
+---
 
-Prerequisites
+## Prerequisites
 
-Terraform >= 1.6
+- Terraform >= 1.6
+- AWS CLI configured (`aws configure`)
+- Region: ap-northeast-1 (Tokyo)
 
-AWS credentials configured (e.g. aws configure)
+---
 
-Region: ap-northeast-1 (Tokyo)
+## Deploy (dev environment)
 
-Deploy (dev)
+⚠️ terraform.tfvars や tfstate は GitHub にコミットしないでください。
 
-⚠️ terraform.tfvars や tfstate はGitHubにコミットしないでください（.gitignore 済み）。
-
+```bash
 cd envs/dev
 cp terraform.tfvars.example terraform.tfvars
 # terraform.tfvars の db_master_password を変更
@@ -63,35 +73,56 @@ cp terraform.tfvars.example terraform.tfvars
 terraform init
 terraform plan
 terraform apply
+```
 
-Verification
+---
 
-Terraform outputs の alb_dns_name を開きます：
+## Verification
 
-http://<alb_dns_name>/
+Terraform outputs に表示される `alb_dns_name` をブラウザで開きます。
 
-WordPressの言語選択画面が表示されればOK（ALB → ECS(Fargate) → Aurora の疎通が成立）
+Expected Result:
 
+- WordPress language selection screen is displayed
+- ALB → ECS → Aurora connectivity confirmed
 
-Notes / Security
+---
 
-現時点は「最短で動かすdev構成」です。ポートフォリオとして段階的に拡張予定：
+## Design Decisions
 
-ECSを private subnet + NAT に移行（より本番寄り）
+### Why Fargate?
+- EC2のパッチ管理・容量管理を不要にする
+- 運用負荷を最小化
 
-DBパスワードを Secrets Manager に移行（tfvars直書き脱却）
+### Why Aurora Serverless v2?
+- 需要変動に応じてACUが自動スケール
+- MySQL互換で扱いやすい
 
-入口を CloudFront + WAF に追加（防御・TLS・キャッシュ）
+### Why ALB?
+- ECSとの統合が容易
+- L7ロードバランサとして標準的構成
 
-ログ（ALBアクセスログ / CloudWatch Logs / VPC Flow Logs）追加
+---
 
+## Future Improvements
 
+- ECSをprivate subnet + NAT構成へ移行
+- Secrets ManagerでDBパスワード管理
+- CloudFront + WAF 追加
+- ログ設計（ALB access log / CloudWatch Logs）
 
-Clean up (to avoid cost)
+---
+
+## Clean Up
+
+```bash
 cd envs/dev
 terraform destroy
+```
 
-Author
+---
 
-Tomomasa Sekino (GitHub: TomomasaSekino)
+## Author
 
+Tomomasa Sekino  
+GitHub: TomomasaSekino

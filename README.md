@@ -12,6 +12,7 @@ flowchart LR
   WAF --> ALB[Application Load Balancer]
   ALB --> ECS[ECS Fargate Service]
   ECS --> AUR[Aurora Serverless v2]
+```
 
 ## Verification
 - Open `http://<alb_dns_name>/`

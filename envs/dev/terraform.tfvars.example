@@ -1,0 +1,9 @@
+project    = "aws-serverless-wordpress"
+env        = "dev"
+aws_region = "ap-northeast-1"
+
+# vpc_cidr = "10.20.0.0/16"
+# az_count = 2
+
+# dev only (later move to Secrets Manager)
+db_master_password = "ChangeMe-12345678!"
